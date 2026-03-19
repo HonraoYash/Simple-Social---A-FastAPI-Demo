@@ -4,6 +4,10 @@ This project is a **learning-focused FastAPI backend demo** built to show that I
 
 The frontend (Streamlit) is included for demonstration, but the primary goal of this project is to showcase backend development using **FastAPI**.
 
+## Live Demo
+
+- Frontend (Streamlit): [https://simple-social-fastapi-backend-demo.streamlit.app/](https://simple-social-fastapi-backend-demo.streamlit.app/)
+
 ## Project Purpose
 
 - Learn and apply FastAPI fundamentals in a practical app.
