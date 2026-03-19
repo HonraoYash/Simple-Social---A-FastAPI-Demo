@@ -2,10 +2,18 @@ import streamlit as st
 import requests
 import base64
 import urllib.parse
+import os
 
 st.set_page_config(page_title="Simple Social", layout="wide")
 
-API_BASE_URL = "http://localhost:8000"
+def resolve_api_base_url():
+    """Resolve backend URL for local and deployed environments."""
+    if "API_BASE_URL" in st.secrets:
+        return st.secrets["API_BASE_URL"].rstrip("/")
+    return os.getenv("API_BASE_URL", "http://localhost:8000").rstrip("/")
+
+
+API_BASE_URL = resolve_api_base_url()
 
 
 def inject_styles():
@@ -158,6 +166,20 @@ def get_headers():
     return {}
 
 
+def api_request(method, path, **kwargs):
+    """Wrapper around requests with timeout and user-friendly errors."""
+    url = f"{API_BASE_URL}{path}"
+    try:
+        return requests.request(method, url, timeout=20, **kwargs)
+    except requests.exceptions.RequestException:
+        st.error(
+            "Unable to reach backend API. "
+            "Set `API_BASE_URL` in Streamlit secrets/env to your deployed FastAPI URL "
+            "(not localhost)."
+        )
+        return None
+
+
 def login_page():
     st.markdown(
         """
@@ -190,13 +212,17 @@ def login_page():
             with col1:
                 if st.button("Login", type="primary", use_container_width=True):
                     login_data = {"username": email, "password": password}
-                    response = requests.post(f"{API_BASE_URL}/auth/jwt/login", data=login_data)
+                    response = api_request("POST", "/auth/jwt/login", data=login_data)
+                    if response is None:
+                        return
 
                     if response.status_code == 200:
                         token_data = response.json()
                         st.session_state.token = token_data["access_token"]
 
-                        user_response = requests.get(f"{API_BASE_URL}/users/me", headers=get_headers())
+                        user_response = api_request("GET", "/users/me", headers=get_headers())
+                        if user_response is None:
+                            return
                         if user_response.status_code == 200:
                             st.session_state.user = user_response.json()
                             st.rerun()
@@ -208,7 +234,9 @@ def login_page():
             with col2:
                 if st.button("Create Account", use_container_width=True):
                     signup_data = {"email": email, "password": password}
-                    response = requests.post(f"{API_BASE_URL}/auth/register", json=signup_data)
+                    response = api_request("POST", "/auth/register", json=signup_data)
+                    if response is None:
+                        return
 
                     if response.status_code == 201:
                         st.success("Account created. You can login now.")
@@ -256,7 +284,9 @@ def upload_page():
         with st.spinner("Uploading..."):
             files = {"file": (uploaded_file.name, uploaded_file.getvalue(), uploaded_file.type)}
             data = {"caption": caption}
-            response = requests.post(f"{API_BASE_URL}/upload", files=files, data=data, headers=get_headers())
+            response = api_request("POST", "/upload", files=files, data=data, headers=get_headers())
+            if response is None:
+                return
 
             if response.status_code == 200:
                 st.success("Post published successfully.")
@@ -305,7 +335,9 @@ def feed_page():
         unsafe_allow_html=True,
     )
 
-    response = requests.get(f"{API_BASE_URL}/feed", headers=get_headers())
+    response = api_request("GET", "/feed", headers=get_headers())
+    if response is None:
+        return
     if response.status_code == 200:
         posts = response.json()["posts"]
 
@@ -365,8 +397,10 @@ def feed_page():
             with col2:
                 if post.get('is_owner', False):
                     if st.button("Delete", key=f"delete_{post['id']}", help="Delete post", use_container_width=True):
-                        response = requests.delete(f"{API_BASE_URL}/posts/{post['id']}", headers=get_headers())
-                        if response.status_code == 200:
+                        delete_response = api_request("DELETE", f"/posts/{post['id']}", headers=get_headers())
+                        if delete_response is None:
+                            return
+                        if delete_response.status_code == 200:
                             st.success("Post deleted.")
                             st.rerun()
                         else:
