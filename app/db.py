@@ -1,5 +1,6 @@
 from collections.abc import AsyncGenerator
 import uuid
+import os
 
 from sqlalchemy import Column, String, Text, DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
@@ -8,8 +9,29 @@ from sqlalchemy.orm import DeclarativeBase, relationship
 from datetime import datetime
 from fastapi_users.db import SQLAlchemyUserDatabase, SQLAlchemyBaseUserTableUUID
 from fastapi import Depends
+from dotenv import load_dotenv
 
-DATABASE_URL = "sqlite+aiosqlite:///./test.db"
+load_dotenv()
+
+
+def resolve_database_url() -> str:
+    """
+    Resolve database URL across local and serverless environments.
+    - Prefer explicit DATABASE_URL if set.
+    - On Vercel, default to /tmp (the writable path).
+    - Locally, keep ./test.db.
+    """
+    env_database_url = os.getenv("DATABASE_URL")
+    if env_database_url:
+        return env_database_url
+
+    if os.getenv("VERCEL"):
+        return "sqlite+aiosqlite:////tmp/test.db"
+
+    return "sqlite+aiosqlite:///./test.db"
+
+
+DATABASE_URL = resolve_database_url()
 
 
 class Base(DeclarativeBase):
