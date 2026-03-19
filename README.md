@@ -7,6 +7,7 @@ The frontend (Streamlit) is included for demonstration, but the primary goal of 
 ## Live Demo
 
 - Frontend (Streamlit): [https://simple-social-fastapi-backend-demo.streamlit.app/](https://simple-social-fastapi-backend-demo.streamlit.app/)
+- Backend API Docs (Fastapi, Vercel): [https://simple-social-a-fast-api-demo.vercel.app/docs](https://simple-social-a-fast-api-demo.vercel.app/docs)
 
 ## Project Purpose
 
